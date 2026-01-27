@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwaggerDocs Portal</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <header>
+        <h1>SwaggerDocs Portal</h1>
+        <p class="subtitle">Central de Documentação de APIs</p>
+    </header>
+
+    <main>
+        <section class="apps-grid">
+            <div th:if="${#lists.isEmpty(apps)}" class="empty-state">
+                <h2>Nenhuma API registrada</h2>
+                <p>Configure seu CI para enviar Swaggers para este portal.</p>
+                <pre><code>curl -X POST http://localhost:8080/api/swaggers \
+  -H "Content-Type: application/json" \
+  -d '{"appName": "my-api", "team": "my-team", "swagger": {...}}'</code></pre>
+            </div>
+
+            <article th:each="app : ${apps}" class="app-card">
+                <div class="app-header">
+                    <h2 th:text="${app.appName}">app-name</h2>
+                    <span th:if="${app.hasBreakingChanges}" class="badge breaking">Breaking!</span>
+                </div>
+
+                <p class="team" th:text="'Team: ' + (${app.team} ?: 'N/A')">Team: team-name</p>
+                <p class="version" th:text="'Version: ' + (${app.version} ?: 'N/A')">v1.0.0</p>
+                <p class="updated" th:text="'Updated: ' + (${app.updatedAt} ?: 'N/A')">2024-01-01</p>
+
+                <div class="score" th:classappend="${app.qualityScore >= 70 ? 'good' : (app.qualityScore >= 50 ? 'warning' : 'bad')}">
+                    <span th:text="'Score: ' + ${app.qualityScore} + '/100'">Score: 85/100</span>
+                </div>
+
+                <a th:href="@{/docs/{name}(name=${app.appName})}" class="btn">Ver Documentação</a>
+            </article>
+        </section>
+    </main>
+
+    <footer>
+        <p>SwaggerDocs Portal - Centralized API Documentation</p>
+    </footer>
+</body>
+</html>

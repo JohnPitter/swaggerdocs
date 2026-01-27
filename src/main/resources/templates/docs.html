@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${appName} + ' - SwaggerDocs'">API - SwaggerDocs</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body class="docs-page">
+    <header>
+        <a href="/" class="back">&larr; Voltar</a>
+        <h1 th:text="${appName}">app-name</h1>
+
+        <nav class="view-toggle">
+            <a th:href="@{/docs/{name}(name=${appName}, view='swagger-ui')}"
+               th:classappend="${view == 'swagger-ui' ? 'active' : ''}">Swagger UI</a>
+            <a th:href="@{/docs/{name}(name=${appName}, view='redoc')}"
+               th:classappend="${view == 'redoc' ? 'active' : ''}">Redoc</a>
+            <a th:href="@{/api/swaggers/{name}/raw(name=${appName})}" target="_blank">Raw JSON</a>
+        </nav>
+    </header>
+
+    <aside class="metadata">
+        <div class="meta-item">
+            <strong>Team:</strong>
+            <span th:text="${info.metadata?.team} ?: 'N/A'">-</span>
+        </div>
+        <div class="meta-item">
+            <strong>Environment:</strong>
+            <span th:text="${info.metadata?.environment} ?: 'N/A'">-</span>
+        </div>
+        <div class="meta-item">
+            <strong>Updated:</strong>
+            <span th:text="${info.metadata?.updatedAt} ?: 'N/A'">-</span>
+        </div>
+        <div class="meta-item">
+            <strong>Quality Score:</strong>
+            <span th:text="${info.quality?.score} + '/100'">-/100</span>
+        </div>
+        <div class="meta-item" th:if="${info.metadata?.commitHash}">
+            <strong>Commit:</strong>
+            <code th:text="${info.metadata.commitHash}">-</code>
+        </div>
+    </aside>
+
+    <div th:if="${info.quality != null and !info.quality.issues.isEmpty()}" class="issues-panel">
+        <h4>Quality Issues:</h4>
+        <ul>
+            <li th:each="issue : ${info.quality.issues}">
+                <span class="issue-category" th:text="${issue.category}">category</span>
+                <span th:text="${issue.message}">Issue message</span>
+                <code th:if="${issue.path}" th:text="${issue.path}">path</code>
+            </li>
+        </ul>
+    </div>
+
+    <main class="docs-container">
+        <div th:if="${view == 'swagger-ui'}" id="swagger-ui"></div>
+
+        <div th:if="${view == 'redoc'}" id="redoc-container">
+            <redoc th:attr="spec-url=@{/api/swaggers/{name}/raw(name=${appName})}"></redoc>
+        </div>
+    </main>
+
+    <th:block th:if="${view == 'swagger-ui'}">
+        <link rel="stylesheet" th:href="@{/webjars/swagger-ui/swagger-ui.css}">
+        <script th:src="@{/webjars/swagger-ui/swagger-ui-bundle.js}"></script>
+        <script th:inline="javascript">
+            window.onload = function() {
+                SwaggerUIBundle({
+                    url: /*[[@{/api/swaggers/{name}/raw(name=${appName})}]]*/ '/api/swaggers/app/raw',
+                    dom_id: '#swagger-ui',
+                    presets: [SwaggerUIBundle.presets.apis],
+                    layout: "BaseLayout"
+                });
+            };
+        </script>
+    </th:block>
+
+    <th:block th:if="${view == 'redoc'}">
+        <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    </th:block>
+</body>
+</html>
