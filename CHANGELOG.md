@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Multi-version OpenAPI/Swagger support (Swagger 2.0, OpenAPI 3.0, OpenAPI 3.1)
+- OpenApiVersionDetector utility for spec version detection
 - Jakarta Validation for request validation with proper error responses
 - GlobalExceptionHandler for consistent error response formatting
 - Validation annotations on SwaggerSubmission (@NotBlank, @NotNull, @Pattern)

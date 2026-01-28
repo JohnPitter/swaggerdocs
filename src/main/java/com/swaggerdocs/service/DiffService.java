@@ -3,6 +3,7 @@ package com.swaggerdocs.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.swaggerdocs.model.BreakingChange;
 import com.swaggerdocs.model.BreakingChange.ChangeType;
+import com.swaggerdocs.util.OpenApiVersionDetector;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -95,10 +96,12 @@ public class DiffService {
     }
 
     private void checkRemovedResponseFields(JsonNode oldSwagger, JsonNode newSwagger, List<BreakingChange> changes) {
-        JsonNode oldSchemas = getSchemas(oldSwagger);
-        JsonNode newSchemas = getSchemas(newSwagger);
+        JsonNode oldSchemas = OpenApiVersionDetector.getSchemas(oldSwagger);
+        JsonNode newSchemas = OpenApiVersionDetector.getSchemas(newSwagger);
 
         if (oldSchemas == null || newSchemas == null) return;
+
+        String schemaPathPrefix = OpenApiVersionDetector.getSchemaPathPrefix(oldSwagger);
 
         oldSchemas.fieldNames().forEachRemaining(schemaName -> {
             JsonNode oldSchema = oldSchemas.get(schemaName);
@@ -107,7 +110,7 @@ public class DiffService {
             if (newSchema == null) {
                 changes.add(BreakingChange.builder()
                         .type(ChangeType.RESPONSE_FIELD_REMOVED)
-                        .path("components/schemas/" + schemaName)
+                        .path(schemaPathPrefix + schemaName)
                         .description("Schema removed: " + schemaName)
                         .build());
                 return;
@@ -121,17 +124,12 @@ public class DiffService {
                     if (!newProps.has(prop)) {
                         changes.add(BreakingChange.builder()
                                 .type(ChangeType.RESPONSE_FIELD_REMOVED)
-                                .path("components/schemas/" + schemaName + "/" + prop)
+                                .path(schemaPathPrefix + schemaName + "/" + prop)
                                 .description("Property removed from " + schemaName + ": " + prop)
                                 .build());
                     }
                 });
             }
         });
-    }
-
-    private JsonNode getSchemas(JsonNode swagger) {
-        JsonNode components = swagger.get("components");
-        return components != null ? components.get("schemas") : null;
     }
 }

@@ -3,6 +3,7 @@ package com.swaggerdocs.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.swaggerdocs.model.QualityScore;
 import com.swaggerdocs.model.QualityScore.QualityIssue;
+import com.swaggerdocs.util.OpenApiVersionDetector;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,17 @@ public class ValidationService {
 
     public QualityScore calculateQuality(JsonNode swagger) {
         List<QualityIssue> issues = new ArrayList<>();
+
+        var specVersion = OpenApiVersionDetector.detectVersion(swagger);
+        log.debug("Detected spec version: {}", OpenApiVersionDetector.getVersionString(swagger));
+
+        if (specVersion == OpenApiVersionDetector.SpecVersion.UNKNOWN) {
+            issues.add(QualityIssue.builder()
+                    .category("format")
+                    .message("Unknown or unsupported specification format. Expected Swagger 2.0 or OpenAPI 3.x")
+                    .path("/")
+                    .build());
+        }
 
         int descriptionScore = checkDescriptions(swagger, issues);
         int examplesScore = checkExamples(swagger, issues);
@@ -82,11 +94,10 @@ public class ValidationService {
     }
 
     private int checkExamples(JsonNode swagger, List<QualityIssue> issues) {
-        JsonNode components = swagger.get("components");
-        if (components == null) return 0;
-
-        JsonNode schemas = components.get("schemas");
+        JsonNode schemas = OpenApiVersionDetector.getSchemas(swagger);
         if (schemas == null) return 50;
+
+        String schemaPath = OpenApiVersionDetector.isSwagger2(swagger) ? "definitions" : "components/schemas";
 
         int total = 0;
         int withExamples = 0;
@@ -104,7 +115,7 @@ public class ValidationService {
             issues.add(QualityIssue.builder()
                     .category("examples")
                     .message(String.format("%d of %d schemas missing examples", total - withExamples, total))
-                    .path("components/schemas")
+                    .path(schemaPath)
                     .build());
         }
 
@@ -161,8 +172,8 @@ public class ValidationService {
     }
 
     private int checkSchemas(JsonNode swagger, List<QualityIssue> issues) {
-        JsonNode components = swagger.get("components");
-        if (components != null && components.has("schemas")) {
+        JsonNode schemas = OpenApiVersionDetector.getSchemas(swagger);
+        if (schemas != null && schemas.size() > 0) {
             return 100;
         }
 

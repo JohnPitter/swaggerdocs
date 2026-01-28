@@ -105,4 +105,87 @@ class ValidationServiceTest {
         assertThat(score.getIssues())
                 .anyMatch(i -> i.getCategory().equals("responses"));
     }
+
+    @Test
+    void shouldValidateSwagger20Spec() {
+        ObjectNode swagger = objectMapper.createObjectNode();
+        swagger.put("swagger", "2.0");
+
+        var info = swagger.putObject("info");
+        info.put("title", "Swagger 2.0 API");
+        info.put("description", "A Swagger 2.0 API");
+        info.put("version", "1.0.0");
+        info.putObject("contact").put("email", "team@example.com");
+
+        var paths = swagger.putObject("paths");
+        var endpoint = paths.putObject("/users");
+        var get = endpoint.putObject("get");
+        get.put("summary", "List users");
+        get.put("description", "Returns all users");
+
+        var responses = get.putObject("responses");
+        responses.putObject("200").put("description", "Success");
+        responses.putObject("400").put("description", "Bad request");
+        responses.putObject("500").put("description", "Server error");
+
+        // Swagger 2.0 uses definitions instead of components/schemas
+        var definitions = swagger.putObject("definitions");
+        var userDef = definitions.putObject("User");
+        userDef.put("type", "object");
+        userDef.put("example", "{ \"id\": 1, \"name\": \"John\" }");
+
+        QualityScore score = service.calculateQuality(swagger);
+
+        assertThat(score.getScore()).isGreaterThan(50);
+        assertThat(score.getIssues())
+                .noneMatch(i -> i.getCategory().equals("format"));
+    }
+
+    @Test
+    void shouldDetectUnknownSpecFormat() {
+        ObjectNode swagger = objectMapper.createObjectNode();
+        swagger.putObject("info").put("title", "No version");
+        swagger.putObject("paths");
+
+        QualityScore score = service.calculateQuality(swagger);
+
+        assertThat(score.getIssues())
+                .anyMatch(i -> i.getCategory().equals("format")
+                        && i.getMessage().contains("Unknown"));
+    }
+
+    @Test
+    void shouldValidateOpenApi31Spec() {
+        ObjectNode swagger = objectMapper.createObjectNode();
+        swagger.put("openapi", "3.1.0");
+
+        var info = swagger.putObject("info");
+        info.put("title", "OpenAPI 3.1 API");
+        info.put("description", "An OpenAPI 3.1 API");
+        info.put("version", "1.0.0");
+        info.putObject("contact").put("email", "team@example.com");
+
+        var paths = swagger.putObject("paths");
+        var endpoint = paths.putObject("/users");
+        var get = endpoint.putObject("get");
+        get.put("summary", "List users");
+        get.put("description", "Returns all users");
+
+        var responses = get.putObject("responses");
+        responses.putObject("200").put("description", "Success");
+        responses.putObject("400").put("description", "Bad request");
+        responses.putObject("500").put("description", "Server error");
+
+        var components = swagger.putObject("components");
+        var schemas = components.putObject("schemas");
+        var userSchema = schemas.putObject("User");
+        userSchema.put("type", "object");
+        userSchema.put("example", "{ \"id\": 1 }");
+
+        QualityScore score = service.calculateQuality(swagger);
+
+        assertThat(score.getScore()).isGreaterThan(50);
+        assertThat(score.getIssues())
+                .noneMatch(i -> i.getCategory().equals("format"));
+    }
 }
