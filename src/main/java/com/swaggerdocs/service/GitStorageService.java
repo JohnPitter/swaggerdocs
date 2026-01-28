@@ -2,7 +2,9 @@ package com.swaggerdocs.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swaggerdocs.config.GitRemoteConfig;
 import com.swaggerdocs.config.StorageConfig;
+import com.swaggerdocs.exception.GitSyncException;
 import com.swaggerdocs.model.SwaggerEntry;
 import com.swaggerdocs.model.SwaggerMetadata;
 import jakarta.annotation.PostConstruct;
@@ -10,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.transport.CredentialsProvider;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -25,35 +29,95 @@ public class GitStorageService {
 
     private final String storagePath;
     private final ObjectMapper objectMapper;
+    private final GitRemoteConfig remoteConfig;
 
     private Git git;
     private Path storageDir;
+    private CredentialsProvider credentialsProvider;
 
-    public GitStorageService(StorageConfig config, ObjectMapper objectMapper) {
+    public GitStorageService(StorageConfig config, ObjectMapper objectMapper, GitRemoteConfig remoteConfig) {
         this.storagePath = config.getPath();
         this.objectMapper = objectMapper;
+        this.remoteConfig = remoteConfig;
     }
 
     public GitStorageService(String storagePath, ObjectMapper objectMapper) {
         this.storagePath = storagePath;
         this.objectMapper = objectMapper;
+        this.remoteConfig = new GitRemoteConfig(); // disabled by default
+    }
+
+    public GitStorageService(String storagePath, ObjectMapper objectMapper, GitRemoteConfig remoteConfig) {
+        this.storagePath = storagePath;
+        this.objectMapper = objectMapper;
+        this.remoteConfig = remoteConfig;
     }
 
     @PostConstruct
     public void init() {
         try {
             storageDir = Path.of(storagePath);
-            Files.createDirectories(storageDir);
 
-            if (Files.exists(storageDir.resolve(".git"))) {
-                git = Git.open(storageDir.toFile());
-                log.info("Opened existing Git repository at {}", storageDir);
+            if (remoteConfig != null && remoteConfig.isConfigured()) {
+                initializeCredentials();
+                initializeFromRemote();
             } else {
-                git = Git.init().setDirectory(storageDir.toFile()).call();
-                log.info("Initialized new Git repository at {}", storageDir);
+                initializeLocal();
             }
         } catch (IOException | GitAPIException e) {
             throw new RuntimeException("Failed to initialize Git storage", e);
+        }
+    }
+
+    private void initializeCredentials() {
+        if (remoteConfig.getToken() != null) {
+            credentialsProvider = new UsernamePasswordCredentialsProvider(
+                    "oauth2", remoteConfig.getToken());
+        }
+    }
+
+    private void initializeFromRemote() throws IOException, GitAPIException {
+        if (!Files.exists(storageDir) || !Files.exists(storageDir.resolve(".git"))) {
+            cloneRemote();
+        } else {
+            openAndPull();
+        }
+    }
+
+    private void cloneRemote() throws GitAPIException {
+        log.info("Cloning remote repository from {} (branch: {})",
+                remoteConfig.getUrl(), remoteConfig.getBranch());
+
+        git = Git.cloneRepository()
+                .setURI(remoteConfig.getUrl())
+                .setBranch(remoteConfig.getBranch())
+                .setDirectory(storageDir.toFile())
+                .setCredentialsProvider(credentialsProvider)
+                .call();
+
+        log.info("Successfully cloned remote repository to {}", storageDir);
+    }
+
+    private void openAndPull() throws IOException, GitAPIException {
+        git = Git.open(storageDir.toFile());
+        log.info("Opened existing repository at {}, pulling latest changes", storageDir);
+
+        git.pull()
+                .setCredentialsProvider(credentialsProvider)
+                .call();
+
+        log.info("Successfully pulled latest changes");
+    }
+
+    private void initializeLocal() throws IOException, GitAPIException {
+        Files.createDirectories(storageDir);
+
+        if (Files.exists(storageDir.resolve(".git"))) {
+            git = Git.open(storageDir.toFile());
+            log.info("Opened existing Git repository at {}", storageDir);
+        } else {
+            git = Git.init().setDirectory(storageDir.toFile()).call();
+            log.info("Initialized new Git repository at {}", storageDir);
         }
     }
 
@@ -79,10 +143,47 @@ public class GitStorageService {
             RevCommit commit = git.commit().setMessage(commitMessage).call();
 
             log.info("Saved swagger for {} at version {}", appName, commit.getId().abbreviate(7).name());
+
+            pushWithRetry();
+
             return commit.getId().abbreviate(7).name();
 
         } catch (IOException | GitAPIException e) {
             throw new RuntimeException("Failed to save swagger for " + appName, e);
+        }
+    }
+
+    private void pushWithRetry() {
+        if (remoteConfig == null || !remoteConfig.isConfigured()) {
+            return;
+        }
+
+        int maxAttempts = remoteConfig.getRetry().getMaxAttempts();
+        long delayMs = remoteConfig.getRetry().getDelayMs();
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                git.push()
+                        .setCredentialsProvider(credentialsProvider)
+                        .call();
+                log.info("Successfully pushed to remote");
+                return;
+            } catch (GitAPIException e) {
+                log.warn("Push attempt {}/{} failed: {}", attempt, maxAttempts, e.getMessage());
+
+                if (attempt >= maxAttempts) {
+                    throw new GitSyncException(
+                            "Push failed after " + maxAttempts + " attempts", e);
+                }
+
+                try {
+                    long backoffDelay = delayMs * (1L << (attempt - 1));
+                    Thread.sleep(backoffDelay);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new GitSyncException("Push interrupted", ie);
+                }
+            }
         }
     }
 

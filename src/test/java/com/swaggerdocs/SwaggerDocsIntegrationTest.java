@@ -92,8 +92,8 @@ class SwaggerDocsIntegrationTest {
 
         // Submit initial version
         SwaggerSubmission v1 = createSubmission(appName);
-        v1.getSwagger().with("paths").putObject("/users").putObject("get");
-        v1.getSwagger().with("paths").putObject("/orders").putObject("get");
+        ((ObjectNode) v1.getSwagger().get("paths")).putObject("/users").putObject("get");
+        ((ObjectNode) v1.getSwagger().get("paths")).putObject("/orders").putObject("get");
 
         var v1Response = restTemplate.postForEntity(
                 "http://localhost:" + port + "/api/swaggers",
@@ -104,7 +104,7 @@ class SwaggerDocsIntegrationTest {
 
         // Submit version with removed endpoint
         SwaggerSubmission v2 = createSubmission(appName);
-        v2.getSwagger().with("paths").putObject("/users").putObject("get");
+        ((ObjectNode) v2.getSwagger().get("paths")).putObject("/users").putObject("get");
         // /orders removed
 
         var v2Response = restTemplate.postForEntity(

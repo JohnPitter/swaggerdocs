@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: add git remote sync design document\n\nDesign for synchronizing local JGit storage with GitHub remote\nrepository to enable persistent storage in ephemeral K8s containers.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: add git remote sync implementation plan\n\nDetailed TDD plan with 10 tasks covering:\n- GitRemoteConfig and GitSyncException\n- Clone/pull on init\n- Push with retry after save\n- Integration tests\n- Documentation updates\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(mvn compile:*)",
+      "WebSearch",
+      "Bash(java -version:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: add GitRemoteConfig for remote repository settings\n\n- Add GitRemoteConfig class with enabled, url, branch, token, and retry settings\n- Add git.remote configuration section to application.yml with env var support\n- Fix swagger-ui version to 5.18.2 \\(5.11.0 doesn''t exist in Maven Central\\)\n- Fix Java version to 17 to match system JDK\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ]
+  }
+}
