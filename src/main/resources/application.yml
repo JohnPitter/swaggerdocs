@@ -8,3 +8,12 @@ spring:
 swaggerdocs:
   storage:
     path: ${user.home}/.swaggerdocs/storage
+  git:
+    remote:
+      enabled: ${GIT_REMOTE_ENABLED:false}
+      url: ${GIT_REMOTE_URL:}
+      branch: ${GIT_REMOTE_BRANCH:main}
+      token: ${GITHUB_TOKEN:}
+      retry:
+        max-attempts: 3
+        delay-ms: 1000
