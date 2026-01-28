@@ -79,6 +79,32 @@ mvn package
 - **Two Constructors**: Services have Spring-managed constructor + test constructor (for mocking)
 - **Quality Scoring**: Weighted categories (descriptions 25%, examples 20%, responses 20%, schemas 20%, metadata 15%)
 
+## Remote Sync (Kubernetes)
+
+For Kubernetes deployments without persistent volumes, enable Git remote sync:
+
+```yaml
+# Environment variables
+GIT_REMOTE_ENABLED: "true"
+GIT_REMOTE_URL: "https://github.com/org/api-specs.git"
+GIT_REMOTE_BRANCH: "main"
+GITHUB_TOKEN: "<fine-grained-pat>"
+```
+
+The application will:
+1. Clone the remote repository on startup
+2. Push after each save (with retry and exponential backoff)
+3. Pull on subsequent restarts to restore state
+
+**GitHub Action Template** (for teams to send specs):
+```yaml
+- name: Publish to SwaggerDocs
+  run: |
+    curl -X POST "${{ vars.SWAGGERDOCS_URL }}/api/swaggers" \
+      -H "Content-Type: application/json" \
+      -d '{"appName": "${{ github.event.repository.name }}", ...}'
+```
+
 ## Implementation Plan
 
 See `docs/plans/2026-01-26-swagger-portal.md` for detailed task breakdown with TDD steps.

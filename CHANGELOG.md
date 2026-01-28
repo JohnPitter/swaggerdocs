@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Git remote sync support for Kubernetes deployments without persistent volumes
+- GitRemoteConfig for configuring remote repository (URL, branch, token, retry settings)
+- Automatic clone from remote on first startup
+- Automatic pull from remote on subsequent startups
+- Push with exponential backoff retry after each save operation
+- GitSyncException for handling sync failures
+- Integration tests for remote sync between multiple instances
 - Initial project setup with Spring Boot 3.2.2 and Java 21
 - Domain models: SwaggerSubmission, SwaggerMetadata, ValidationResult, QualityScore, BreakingChange, SwaggerEntry, SwaggerInfo
 - Git-based storage service with JGit for versioning swagger specs
