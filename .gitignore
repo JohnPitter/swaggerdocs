@@ -40,3 +40,7 @@ logs/
 
 ### Swagger Storage ###
 .swaggerdocs/
+
+### Claude Code ###
+CLAUDE.md
+.claude/
