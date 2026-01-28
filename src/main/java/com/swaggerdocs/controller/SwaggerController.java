@@ -5,6 +5,7 @@ import com.swaggerdocs.model.SwaggerInfo;
 import com.swaggerdocs.model.SwaggerSubmission;
 import com.swaggerdocs.model.ValidationResult;
 import com.swaggerdocs.service.SwaggerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,7 @@ public class SwaggerController {
     private final SwaggerService swaggerService;
 
     @PostMapping
-    public ResponseEntity<ValidationResult> submitSwagger(@RequestBody SwaggerSubmission submission) {
+    public ResponseEntity<ValidationResult> submitSwagger(@Valid @RequestBody SwaggerSubmission submission) {
         log.info("Received swagger submission for app: {}", submission.getAppName());
         ValidationResult result = swaggerService.processSubmission(submission);
         return ResponseEntity.ok(result);

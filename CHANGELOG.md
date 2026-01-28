@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Jakarta Validation for request validation with proper error responses
+- GlobalExceptionHandler for consistent error response formatting
+- Validation annotations on SwaggerSubmission (@NotBlank, @NotNull, @Pattern)
+- HttpMessageNotReadableException handler for malformed JSON requests
 - Git remote sync support for Kubernetes deployments without persistent volumes
 - GitRemoteConfig for configuring remote repository (URL, branch, token, retry settings)
 - Automatic clone from remote on first startup
