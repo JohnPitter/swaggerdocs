@@ -51,6 +51,7 @@ public class SwaggerService {
                 .branch(submission.getMetadata() != null ? submission.getMetadata().getBranch() : null)
                 .pipelineUrl(submission.getMetadata() != null ? submission.getMetadata().getPipelineUrl() : null)
                 .updatedAt(Instant.now())
+                .qualityScore(quality.getScore())
                 .build();
 
         String version = gitStorageService.save(appName, submission.getSwagger(), metadata);

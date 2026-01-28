@@ -229,6 +229,7 @@ public class GitStorageService {
                                     .appName(meta.getAppName())
                                     .team(meta.getTeam())
                                     .version(meta.getVersion())
+                                    .qualityScore(meta.getQualityScore())
                                     .updatedAt(meta.getUpdatedAt())
                                     .build());
                         });

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${appName} + ' - SwaggerDocs'">API - SwaggerDocs</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -104,7 +105,8 @@
             </div>
             <div class="meta-item" th:if="${info.metadata?.commitHash}">
                 <strong>Commit</strong>
-                <code th:text="${info.metadata.commitHash}">-</code>
+                <code th:text="${#strings.abbreviate(info.metadata.commitHash, 10)}"
+                      th:title="${info.metadata.commitHash}">-</code>
             </div>
 
             <div th:if="${info.quality != null and not #lists.isEmpty(info.quality.issues)}" class="issues-panel">

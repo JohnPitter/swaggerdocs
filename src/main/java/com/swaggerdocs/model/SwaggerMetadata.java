@@ -20,4 +20,5 @@ public class SwaggerMetadata {
     private String branch;
     private String pipelineUrl;
     private Instant updatedAt;
+    private int qualityScore;
 }

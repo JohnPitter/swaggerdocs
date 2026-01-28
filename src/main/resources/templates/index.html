@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SwaggerDocs Portal</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
@@ -29,8 +30,7 @@
                 </div>
 
                 <p class="team" th:text="'Team: ' + (${app.team} ?: 'N/A')">Team: team-name</p>
-                <p class="version" th:text="'Version: ' + (${app.version} ?: 'N/A')">v1.0.0</p>
-                <p class="updated" th:text="'Updated: ' + (${app.updatedAt} ?: 'N/A')">2024-01-01</p>
+                <p class="updated" th:if="${app.updatedAt}" th:text="'Updated: ' + ${#temporals.format(app.updatedAt, 'dd/MM/yyyy HH:mm')}">Updated: 01/01/2024 12:00</p>
 
                 <div class="score" th:classappend="${app.qualityScore >= 70 ? 'good' : (app.qualityScore >= 50 ? 'warning' : 'bad')}">
                     <span th:text="'Score: ' + ${app.qualityScore} + '/100'">Score: 85/100</span>
