@@ -4,11 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${appName} + ' - SwaggerDocs'">API - SwaggerDocs</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        header {
+            background: #1a1a2e; color: white; padding: 1rem 2rem;
+            display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;
+        }
+        header h1 { font-size: 1.5rem; }
+        .back { color: #88c0ff; text-decoration: none; }
+        .back:hover { text-decoration: underline; }
+        .view-toggle { display: flex; gap: 0.5rem; margin-left: auto; }
+        .view-toggle a {
+            padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none;
+            color: #ccc; background: #2a2a4a;
+        }
+        .view-toggle a.active { background: #0066cc; color: white; }
+        .view-toggle a:hover { background: #3a3a5a; }
+        .content-wrapper { display: flex; min-height: calc(100vh - 60px); }
+        .sidebar {
+            width: 280px; background: #f8f9fa; padding: 1.5rem;
+            border-right: 1px solid #dee2e6; flex-shrink: 0;
+        }
+        .meta-item { margin-bottom: 1rem; }
+        .meta-item strong { display: block; font-size: 0.85rem; color: #666; margin-bottom: 0.25rem; }
+        .meta-item span, .meta-item code { font-size: 0.95rem; }
+        .meta-item code { background: #e9ecef; padding: 0.2rem 0.4rem; border-radius: 3px; }
+        .issues-panel {
+            background: #fff3cd; padding: 1rem; border-radius: 8px;
+            margin-top: 1rem; border-left: 4px solid #ffc107;
+        }
+        .issues-panel h4 { margin-bottom: 0.5rem; color: #856404; }
+        .issues-panel ul { margin: 0; padding-left: 1.2rem; }
+        .issues-panel li { margin: 0.5rem 0; font-size: 0.9rem; }
+        .issue-category {
+            background: #ffc107; color: #000; padding: 0.1rem 0.4rem;
+            border-radius: 3px; font-size: 0.75rem; margin-right: 0.5rem;
+        }
+        .versions-panel {
+            margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #dee2e6;
+        }
+        .versions-panel h4 { margin-bottom: 0.75rem; font-size: 0.9rem; color: #666; }
+        .version-list { list-style: none; }
+        .version-list li { margin: 0.3rem 0; }
+        .version-list a {
+            font-family: monospace; font-size: 0.85rem; color: #0066cc;
+            text-decoration: none;
+        }
+        .version-list a:hover { text-decoration: underline; }
+        .version-list .current { font-weight: bold; }
+        .history-link {
+            display: inline-block; margin-top: 0.5rem; font-size: 0.85rem;
+            color: #0066cc; text-decoration: none;
+        }
+        .main-content { flex: 1; overflow: hidden; }
+        #swagger-ui, #redoc-container { height: 100%; }
+        .breaking-changes-banner {
+            background: #f8d7da; color: #721c24; padding: 1rem;
+            border-left: 4px solid #dc3545; margin-bottom: 0;
+        }
+        .breaking-changes-banner h4 { margin-bottom: 0.5rem; }
+        .breaking-changes-banner ul { margin: 0; padding-left: 1.5rem; }
+        .breaking-changes-banner a { color: #721c24; }
+    </style>
 </head>
-<body class="docs-page">
+<body>
     <header>
-        <a href="/" class="back">&larr; Voltar</a>
+        <a href="/" class="back">&larr; Back</a>
         <h1 th:text="${appName}">app-name</h1>
 
         <nav class="view-toggle">
@@ -16,62 +78,83 @@
                th:classappend="${view == 'swagger-ui' ? 'active' : ''}">Swagger UI</a>
             <a th:href="@{/docs/{name}(name=${appName}, view='redoc')}"
                th:classappend="${view == 'redoc' ? 'active' : ''}">Redoc</a>
-            <a th:href="@{/api/swaggers/{name}/raw(name=${appName})}" target="_blank">Raw JSON</a>
+            <a th:href="@{/docs/{name}/history(name=${appName})}">History</a>
+            <a th:href="@{/api/swaggers/{name}/raw(name=${appName})}" target="_blank">Raw</a>
         </nav>
     </header>
 
-    <aside class="metadata">
-        <div class="meta-item">
-            <strong>Team:</strong>
-            <span th:text="${info.metadata?.team} ?: 'N/A'">-</span>
-        </div>
-        <div class="meta-item">
-            <strong>Environment:</strong>
-            <span th:text="${info.metadata?.environment} ?: 'N/A'">-</span>
-        </div>
-        <div class="meta-item">
-            <strong>Updated:</strong>
-            <span th:text="${info.metadata?.updatedAt} ?: 'N/A'">-</span>
-        </div>
-        <div class="meta-item">
-            <strong>Quality Score:</strong>
-            <span th:text="${info.quality?.score} + '/100'">-/100</span>
-        </div>
-        <div class="meta-item" th:if="${info.metadata?.commitHash}">
-            <strong>Commit:</strong>
-            <code th:text="${info.metadata.commitHash}">-</code>
-        </div>
-    </aside>
+    <div class="content-wrapper">
+        <aside class="sidebar">
+            <div class="meta-item">
+                <strong>Team</strong>
+                <span th:text="${info.metadata?.team} ?: 'N/A'">-</span>
+            </div>
+            <div class="meta-item">
+                <strong>Environment</strong>
+                <span th:text="${info.metadata?.environment} ?: 'N/A'">-</span>
+            </div>
+            <div class="meta-item">
+                <strong>Updated</strong>
+                <span th:text="${#temporals.format(info.metadata?.updatedAt, 'dd/MM/yyyy HH:mm')}" th:if="${info.metadata?.updatedAt}">-</span>
+            </div>
+            <div class="meta-item">
+                <strong>Quality Score</strong>
+                <span th:text="${info.quality?.score} + '/100'"
+                      th:style="${info.quality?.score < 50 ? 'color: #dc3545' : (info.quality?.score < 70 ? 'color: #ffc107' : 'color: #28a745')}">-/100</span>
+            </div>
+            <div class="meta-item" th:if="${info.metadata?.commitHash}">
+                <strong>Commit</strong>
+                <code th:text="${info.metadata.commitHash}">-</code>
+            </div>
 
-    <div th:if="${info.quality != null and !info.quality.issues.isEmpty()}" class="issues-panel">
-        <h4>Quality Issues:</h4>
-        <ul>
-            <li th:each="issue : ${info.quality.issues}">
-                <span class="issue-category" th:text="${issue.category}">category</span>
-                <span th:text="${issue.message}">Issue message</span>
-                <code th:if="${issue.path}" th:text="${issue.path}">path</code>
-            </li>
-        </ul>
+            <div th:if="${info.quality != null and not #lists.isEmpty(info.quality.issues)}" class="issues-panel">
+                <h4>Quality Issues</h4>
+                <ul>
+                    <li th:each="issue : ${info.quality.issues}">
+                        <span class="issue-category" th:text="${issue.category}">cat</span>
+                        <span th:text="${issue.message}">msg</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="versions-panel" th:if="${info.versions != null and not #lists.isEmpty(info.versions)}">
+                <h4>Recent Versions</h4>
+                <ul class="version-list">
+                    <li th:each="v, iter : ${info.versions}" th:if="${iter.index < 5}">
+                        <a th:href="@{/docs/{name}(name=${appName}, version=${v}, view=${view})}"
+                           th:text="${v}"
+                           th:classappend="${iter.first ? 'current' : ''}">abc123</a>
+                        <span th:if="${iter.first}" style="font-size: 0.75rem; color: #28a745;"> (current)</span>
+                    </li>
+                </ul>
+                <a th:href="@{/docs/{name}/history(name=${appName})}" class="history-link">
+                    View all versions &rarr;
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div th:if="${view == 'swagger-ui'}" id="swagger-ui"></div>
+            <div th:if="${view == 'redoc'}" id="redoc-container"></div>
+        </main>
     </div>
 
-    <main class="docs-container">
-        <div th:if="${view == 'swagger-ui'}" id="swagger-ui"></div>
-
-        <div th:if="${view == 'redoc'}" id="redoc-container">
-            <redoc th:attr="spec-url=@{/api/swaggers/{name}/raw(name=${appName})}"></redoc>
-        </div>
-    </main>
-
     <th:block th:if="${view == 'swagger-ui'}">
-        <link rel="stylesheet" th:href="@{/webjars/swagger-ui/swagger-ui.css}">
-        <script th:src="@{/webjars/swagger-ui/swagger-ui-bundle.js}"></script>
+        <link rel="stylesheet" href="/webjars/swagger-ui/5.18.2/swagger-ui.css">
+        <script src="/webjars/swagger-ui/5.18.2/swagger-ui-bundle.js"></script>
         <script th:inline="javascript">
             window.onload = function() {
+                var version = /*[[${selectedVersion}]]*/ null;
+                var url = /*[[@{/api/swaggers/{name}/raw(name=${appName})}]]*/ '/api/swaggers/app/raw';
+                if (version) {
+                    url = url + '?version=' + version;
+                }
                 SwaggerUIBundle({
-                    url: /*[[@{/api/swaggers/{name}/raw(name=${appName})}]]*/ '/api/swaggers/app/raw',
+                    url: url,
                     dom_id: '#swagger-ui',
                     presets: [SwaggerUIBundle.presets.apis],
-                    layout: "BaseLayout"
+                    layout: "BaseLayout",
+                    deepLinking: true
                 });
             };
         </script>
@@ -79,6 +162,14 @@
 
     <th:block th:if="${view == 'redoc'}">
         <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+        <script th:inline="javascript">
+            var version = /*[[${selectedVersion}]]*/ null;
+            var url = /*[[@{/api/swaggers/{name}/raw(name=${appName})}]]*/ '/api/swaggers/app/raw';
+            if (version) {
+                url = url + '?version=' + version;
+            }
+            Redoc.init(url, {}, document.getElementById('redoc-container'));
+        </script>
     </th:block>
 </body>
 </html>

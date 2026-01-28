@@ -40,9 +40,34 @@ public class SwaggerController {
     }
 
     @GetMapping("/{appName}/raw")
-    public ResponseEntity<?> getRawSwagger(@PathVariable String appName) {
+    public ResponseEntity<?> getRawSwagger(
+            @PathVariable String appName,
+            @RequestParam(required = false) String version) {
+        if (version != null && !version.isEmpty()) {
+            return swaggerService.getSwaggerAtVersion(appName, version)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        }
         return swaggerService.getApp(appName)
                 .map(info -> ResponseEntity.ok(info.getSwagger()))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{appName}/versions")
+    public ResponseEntity<List<String>> getVersionHistory(@PathVariable String appName) {
+        var versions = swaggerService.getVersionHistory(appName);
+        if (versions.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(versions);
+    }
+
+    @GetMapping("/{appName}/diff")
+    public ResponseEntity<?> compareVersions(
+            @PathVariable String appName,
+            @RequestParam String from,
+            @RequestParam(defaultValue = "current") String to) {
+        var changes = swaggerService.compareVersions(appName, from, to);
+        return ResponseEntity.ok(changes);
     }
 }

@@ -86,4 +86,21 @@ public class SwaggerService {
                     .build();
         });
     }
+
+    public Optional<com.fasterxml.jackson.databind.JsonNode> getSwaggerAtVersion(String appName, String version) {
+        return gitStorageService.getSwaggerAtVersion(appName, version);
+    }
+
+    public List<BreakingChange> compareVersions(String appName, String fromVersion, String toVersion) {
+        var fromSwagger = gitStorageService.getSwaggerAtVersion(appName, fromVersion).orElse(null);
+        var toSwagger = toVersion.equals("current")
+            ? gitStorageService.getSwagger(appName).orElse(null)
+            : gitStorageService.getSwaggerAtVersion(appName, toVersion).orElse(null);
+
+        return diffService.findBreakingChanges(fromSwagger, toSwagger);
+    }
+
+    public List<String> getVersionHistory(String appName) {
+        return gitStorageService.getVersionHistory(appName);
+    }
 }

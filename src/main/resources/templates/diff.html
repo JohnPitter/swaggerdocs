@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${appName} + ' - Version Diff'">API Diff</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .diff-container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .diff-header {
+            background: #f8f9fa; padding: 1.5rem; border-radius: 8px;
+            margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;
+        }
+        .version-badge {
+            font-family: monospace; padding: 0.5rem 1rem;
+            background: #e9ecef; border-radius: 4px; font-weight: bold;
+        }
+        .arrow { font-size: 1.5rem; color: #6c757d; }
+        .changes-list { list-style: none; padding: 0; }
+        .change-item {
+            padding: 1rem; margin: 0.5rem 0; border-radius: 8px;
+            border-left: 4px solid;
+        }
+        .change-ENDPOINT_REMOVED { background: #f8d7da; border-color: #dc3545; }
+        .change-METHOD_REMOVED { background: #fff3cd; border-color: #ffc107; }
+        .change-PROPERTY_REMOVED { background: #ffeeba; border-color: #fd7e14; }
+        .change-type {
+            font-weight: bold; font-size: 0.85rem; text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .change-path { font-family: monospace; font-size: 1.1rem; }
+        .change-description { color: #555; margin-top: 0.5rem; }
+        .no-changes {
+            text-align: center; padding: 3rem;
+            background: #d4edda; border-radius: 8px; color: #155724;
+        }
+        .no-changes h3 { margin: 0; }
+        .summary {
+            display: flex; gap: 1rem; margin-bottom: 1.5rem;
+        }
+        .summary-item {
+            padding: 1rem 1.5rem; border-radius: 8px; text-align: center;
+        }
+        .summary-item.breaking { background: #f8d7da; }
+        .summary-item.safe { background: #d4edda; }
+        .summary-count { font-size: 2rem; font-weight: bold; }
+        .summary-label { font-size: 0.9rem; color: #555; }
+    </style>
+</head>
+<body>
+    <header>
+        <a th:href="@{/docs/{name}/history(name=${appName})}" class="back">&larr; Back to History</a>
+        <h1 th:text="${appName} + ' - Version Diff'">API Diff</h1>
+    </header>
+
+    <div class="diff-container">
+        <div class="diff-header">
+            <span class="version-badge" th:text="${fromVersion}">abc1234</span>
+            <span class="arrow">&rarr;</span>
+            <span class="version-badge" th:text="${toVersion == 'current' ? 'Current' : toVersion}">Current</span>
+        </div>
+
+        <div class="summary">
+            <div class="summary-item" th:classappend="${#lists.isEmpty(changes) ? 'safe' : 'breaking'}">
+                <div class="summary-count" th:text="${#lists.size(changes)}">0</div>
+                <div class="summary-label">Breaking Changes</div>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(changes)}" class="no-changes">
+            <h3>No Breaking Changes Detected</h3>
+            <p>The API is backward compatible between these versions.</p>
+        </div>
+
+        <div th:unless="${#lists.isEmpty(changes)}">
+            <h2>Breaking Changes</h2>
+            <ul class="changes-list">
+                <li th:each="change : ${changes}"
+                    class="change-item"
+                    th:classappend="'change-' + ${change.type}">
+                    <div class="change-type" th:text="${change.type}">ENDPOINT_REMOVED</div>
+                    <div class="change-path" th:text="${change.path}">/api/endpoint</div>
+                    <div class="change-description" th:text="${change.description}">Description</div>
+                </li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <a th:href="@{/docs/{name}(name=${appName}, version=${fromVersion}, view='swagger-ui')}"
+               style="margin-right: 1rem;">View Old Version</a>
+            <a th:href="@{/docs/{name}(name=${appName}, view='swagger-ui')}">View Current Version</a>
+        </div>
+    </div>
+</body>
+</html>

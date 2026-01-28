@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${appName} + ' - Version History'">API History</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .history-container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .version-list { list-style: none; padding: 0; }
+        .version-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1rem; margin: 0.5rem 0; background: #f8f9fa;
+            border-radius: 8px; border-left: 4px solid #0066cc;
+        }
+        .version-item:first-child { border-left-color: #28a745; }
+        .version-hash { font-family: monospace; font-weight: bold; font-size: 1.1rem; }
+        .version-actions { display: flex; gap: 0.5rem; }
+        .version-actions a {
+            padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .btn-view { background: #0066cc; color: white; }
+        .btn-diff { background: #6c757d; color: white; }
+        .btn-view:hover { background: #0052a3; }
+        .btn-diff:hover { background: #545b62; }
+        .current-badge {
+            background: #28a745; color: white; padding: 0.25rem 0.5rem;
+            border-radius: 4px; font-size: 0.8rem; margin-left: 0.5rem;
+        }
+        .compare-form {
+            background: #e9ecef; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;
+        }
+        .compare-form h3 { margin-top: 0; }
+        .compare-form select { padding: 0.5rem; margin: 0 0.5rem; }
+        .compare-form button {
+            padding: 0.5rem 1rem; background: #0066cc; color: white;
+            border: none; border-radius: 4px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a th:href="@{/docs/{name}(name=${appName})}" class="back">&larr; Back to Docs</a>
+        <h1 th:text="${appName} + ' - Version History'">API History</h1>
+    </header>
+
+    <div class="history-container">
+        <div class="compare-form">
+            <h3>Compare Versions</h3>
+            <form th:action="@{/docs/{name}/diff(name=${appName})}" method="get">
+                <label>From:
+                    <select name="from">
+                        <option th:each="v : ${versions}" th:value="${v}" th:text="${v}"></option>
+                    </select>
+                </label>
+                <label>To:
+                    <select name="to">
+                        <option value="current">Current</option>
+                        <option th:each="v : ${versions}" th:value="${v}" th:text="${v}"></option>
+                    </select>
+                </label>
+                <button type="submit">Compare</button>
+            </form>
+        </div>
+
+        <h2>All Versions</h2>
+        <ul class="version-list">
+            <li class="version-item" th:each="version, iter : ${versions}">
+                <div>
+                    <span class="version-hash" th:text="${version}">abc1234</span>
+                    <span th:if="${iter.first}" class="current-badge">Current</span>
+                </div>
+                <div class="version-actions">
+                    <a class="btn-view"
+                       th:href="@{/docs/{name}(name=${appName}, version=${version}, view='swagger-ui')}">
+                        View
+                    </a>
+                    <a class="btn-diff" th:unless="${iter.first}"
+                       th:href="@{/docs/{name}/diff(name=${appName}, from=${version}, to='current')}">
+                        Diff to Current
+                    </a>
+                </div>
+            </li>
+        </ul>
+
+        <div th:if="${#lists.isEmpty(versions)}">
+            <p>No version history available.</p>
+        </div>
+    </div>
+</body>
+</html>
