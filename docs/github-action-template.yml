@@ -1,0 +1,130 @@
+# SwaggerDocs Publisher - GitHub Action Template
+#
+# Copy this file to your repository: .github/workflows/swagger-publish.yml
+#
+# Required setup:
+#   1. Create a repository variable: SWAGGERDOCS_URL (e.g., https://swaggerdocs.empresa.com)
+#   2. Adjust the 'paths' trigger to match your swagger file location
+#   3. Update the swagger file path in the curl command
+
+name: Publish Swagger to Portal
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'docs/swagger.json'
+      - 'docs/swagger.yaml'
+      - 'docs/openapi.json'
+      - 'docs/openapi.yaml'
+      - 'src/main/resources/openapi.yaml'
+      - 'api/swagger.json'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish API Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find Swagger file
+        id: find-swagger
+        run: |
+          # Search for swagger/openapi file in common locations
+          for file in docs/swagger.json docs/swagger.yaml docs/openapi.json docs/openapi.yaml src/main/resources/openapi.yaml api/swagger.json; do
+            if [ -f "$file" ]; then
+              echo "swagger_file=$file" >> $GITHUB_OUTPUT
+              echo "Found swagger file: $file"
+              exit 0
+            fi
+          done
+          echo "No swagger file found!"
+          exit 1
+
+      - name: Convert YAML to JSON (if needed)
+        id: convert
+        run: |
+          FILE="${{ steps.find-swagger.outputs.swagger_file }}"
+          if [[ "$FILE" == *.yaml ]] || [[ "$FILE" == *.yml ]]; then
+            # Install yq for YAML to JSON conversion
+            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+            sudo chmod +x /usr/local/bin/yq
+            yq -o=json eval '.' "$FILE" > /tmp/swagger.json
+            echo "swagger_json=/tmp/swagger.json" >> $GITHUB_OUTPUT
+          else
+            echo "swagger_json=$FILE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to SwaggerDocs Portal
+        env:
+          SWAGGERDOCS_URL: ${{ vars.SWAGGERDOCS_URL }}
+        run: |
+          if [ -z "$SWAGGERDOCS_URL" ]; then
+            echo "Error: SWAGGERDOCS_URL variable not set!"
+            echo "Please add it in: Settings > Secrets and variables > Actions > Variables"
+            exit 1
+          fi
+
+          SWAGGER_CONTENT=$(cat ${{ steps.convert.outputs.swagger_json }})
+
+          # Extract version from swagger if available
+          VERSION=$(echo "$SWAGGER_CONTENT" | jq -r '.info.version // "unknown"')
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${SWAGGERDOCS_URL}/api/swaggers" \
+            -H "Content-Type: application/json" \
+            -d @- << EOF
+          {
+            "appName": "${{ github.event.repository.name }}",
+            "team": "${{ github.repository_owner }}",
+            "environment": "production",
+            "version": "${VERSION}",
+            "swagger": ${SWAGGER_CONTENT},
+            "metadata": {
+              "commitHash": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "pipelineUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+          }
+          EOF
+          )
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response: $BODY"
+          echo "HTTP Status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Successfully published to SwaggerDocs Portal!"
+
+            # Parse and display quality score if available
+            SCORE=$(echo "$BODY" | jq -r '.qualityScore.score // "N/A"')
+            STATUS=$(echo "$BODY" | jq -r '.status // "N/A"')
+
+            echo ""
+            echo "================================"
+            echo "Publication Result"
+            echo "================================"
+            echo "Status: $STATUS"
+            echo "Quality Score: $SCORE"
+            echo "Portal URL: ${SWAGGERDOCS_URL}/docs/${{ github.event.repository.name }}"
+            echo "================================"
+          else
+            echo "Failed to publish to SwaggerDocs Portal!"
+            exit 1
+          fi
+
+      - name: Add summary
+        run: |
+          echo "## SwaggerDocs Publication" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[View API Documentation](${{ vars.SWAGGERDOCS_URL }}/docs/${{ github.event.repository.name }})" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,40 @@
+# SwaggerDocs Publisher - Simplified Version
+#
+# Copy to: .github/workflows/swagger-publish.yml
+# Configure: SWAGGERDOCS_URL as repository variable
+# Adjust: path to your swagger.json file
+
+name: Publish Swagger
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/swagger.json']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish to SwaggerDocs
+        run: |
+          curl -X POST "${{ vars.SWAGGERDOCS_URL }}/api/swaggers" \
+            -H "Content-Type: application/json" \
+            -d @- << 'EOF'
+          {
+            "appName": "${{ github.event.repository.name }}",
+            "team": "${{ github.repository_owner }}",
+            "environment": "production",
+            "version": "${{ github.sha }}",
+            "swagger": ${{ toJson(fromJson(github.event.repository.name)) || '{}' }},
+            "metadata": {
+              "commitHash": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "pipelineUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+          }
+          EOF
+
+          # Note: Replace the swagger field above with actual file content:
+          # "swagger": $(cat docs/swagger.json)
