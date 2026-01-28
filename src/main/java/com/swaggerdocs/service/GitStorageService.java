@@ -14,6 +14,7 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.transport.CredentialsProvider;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -35,6 +36,7 @@ public class GitStorageService {
     private Path storageDir;
     private CredentialsProvider credentialsProvider;
 
+    @Autowired
     public GitStorageService(StorageConfig config, ObjectMapper objectMapper, GitRemoteConfig remoteConfig) {
         this.storagePath = config.getPath();
         this.objectMapper = objectMapper;

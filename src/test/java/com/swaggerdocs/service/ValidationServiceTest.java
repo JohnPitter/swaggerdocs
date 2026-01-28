@@ -37,9 +37,27 @@ class ValidationServiceTest {
         get.put("description", "Returns all users");
 
         var responses = get.putObject("responses");
-        responses.putObject("200").put("description", "Success");
+        var ok = responses.putObject("200");
+        ok.put("description", "Success");
+        ok.putObject("content").putObject("application/json")
+            .putObject("schema").put("type", "array");
+        ok.putObject("examples").putObject("default").put("value", "[]");
+
         responses.putObject("400").put("description", "Bad request");
         responses.putObject("500").put("description", "Server error");
+
+        // Add request body with schema and example
+        var requestBody = get.putObject("requestBody");
+        var content = requestBody.putObject("content").putObject("application/json");
+        content.putObject("schema").put("type", "object");
+        content.putObject("example").put("name", "John");
+
+        // Add components with schemas
+        var components = swagger.putObject("components");
+        var schemas = components.putObject("schemas");
+        var userSchema = schemas.putObject("User");
+        userSchema.put("type", "object");
+        userSchema.put("description", "User entity");
 
         QualityScore score = service.calculateQuality(swagger);
 
