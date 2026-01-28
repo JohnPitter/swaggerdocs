@@ -6,20 +6,22 @@ A centralized API documentation portal for enterprises. Applications send their 
 
 ## Features
 
+- **Multi-Version Support**: Swagger 2.0, OpenAPI 3.0, and OpenAPI 3.1
 - **Centralized Documentation**: Single portal for all your microservices APIs
 - **Version History**: Git-based versioning with full history tracking
 - **Breaking Change Detection**: Automatic detection of breaking changes between versions
 - **Quality Scoring**: Validates API specs for descriptions, examples, error responses, schemas
 - **Multiple Viewers**: Swagger UI and Redoc support
+- **Request Validation**: Proper 400 responses with detailed error messages
 - **CI/CD Integration**: GitHub Actions templates for automated publishing
 - **Remote Sync**: Optional sync to GitHub repository for persistence in Kubernetes
 
 ## Tech Stack
 
-- Java 21
+- Java 17+
 - Spring Boot 3.2.x
 - JGit for Git-based storage
-- openapi-diff for breaking change detection
+- Jakarta Validation for request validation
 - Thymeleaf + WebJars (Swagger UI, Redoc)
 - Lombok
 
@@ -27,7 +29,7 @@ A centralized API documentation portal for enterprises. Applications send their 
 
 ### Prerequisites
 
-- Java 21+
+- Java 17+
 - Maven 3.8+
 
 ### Run Locally
@@ -133,27 +135,84 @@ jobs:
             -d @- << EOF
           {
             "appName": "${{ github.event.repository.name }}",
+            "team": "your-team",
+            "environment": "production",
             "swagger": $(cat src/main/resources/openapi/api.json),
             "metadata": {
-              "team": "your-team",
-              "environment": "production",
-              "commitHash": "${{ github.sha }}"
+              "commitHash": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "pipelineUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
           }
           EOF
 ```
+
+## Supported Formats
+
+The portal accepts multiple OpenAPI/Swagger specification versions:
+
+| Format | Version Field | Schemas Location |
+|--------|---------------|------------------|
+| Swagger 2.0 | `"swagger": "2.0"` | `definitions/` |
+| OpenAPI 3.0 | `"openapi": "3.0.x"` | `components/schemas/` |
+| OpenAPI 3.1 | `"openapi": "3.1.x"` | `components/schemas/` |
 
 ## Submission Format
 
 ```json
 {
   "appName": "my-api",
-  "swagger": { /* OpenAPI 3.x spec */ },
+  "team": "backend-squad",
+  "environment": "production",
+  "swagger": { /* Swagger 2.0 or OpenAPI 3.x spec */ },
   "metadata": {
-    "team": "backend-squad",
-    "environment": "production",
-    "commitHash": "abc1234"
+    "commitHash": "abc1234",
+    "branch": "main",
+    "pipelineUrl": "https://github.com/..."
   }
+}
+```
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `appName` | string | Unique app identifier (letters, numbers, hyphens, underscores) |
+| `team` | string | Team responsible for the API |
+| `swagger` | object | The OpenAPI/Swagger specification |
+
+### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `environment` | string | Deployment environment (e.g., production, staging) |
+| `metadata.commitHash` | string | Git commit hash |
+| `metadata.branch` | string | Git branch name |
+| `metadata.pipelineUrl` | string | CI/CD pipeline URL |
+
+## Error Responses
+
+The API returns structured error responses for validation failures:
+
+```json
+// 400 Bad Request - Validation Error
+{
+  "timestamp": "2026-01-28T12:00:00Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "errors": [
+    "appName: appName is required",
+    "swagger: swagger is required"
+  ]
+}
+
+// 400 Bad Request - Malformed JSON
+{
+  "timestamp": "2026-01-28T12:00:00Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Malformed JSON request"
 }
 ```
 
